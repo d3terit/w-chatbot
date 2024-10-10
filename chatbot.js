@@ -1,12 +1,12 @@
+const API_URL = 'http://localhost:8080/';
 class ChatBot extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
         this.chatbotId = this.getAttribute('chatbotId');
-        this.messages = [
-            { role: 'assistant', content: 'Mensaje de bienvenida' },
-        ];
         this.token = this.getAttribute('token') || localStorage.getItem(this.getAttribute('keyLocal') || 'chatbot-token');
+        this.chatbotConfig = null;
+        this.isAnswering = false;
         const style = document.createElement('style');
         style.textContent = `
             @font-face {
@@ -20,6 +20,70 @@ class ChatBot extends HTMLElement {
         document.head.appendChild(style);
     }
 
+    connectedCallback() {
+        this.initChatbot();
+    }
+
+    async initChatbot() {
+        await this.loadChatbotConfig();
+        await this.loadChatsHistory();
+        this.render();
+    }
+
+    async loadChatbotConfig() {
+        if (!this.token || !this.chatbotId) return;
+        const response = await fetch(API_URL + 'api/chatbot_config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + this.token
+            },
+            body: JSON.stringify({ chatbot_id: this.chatbotId })
+        })
+        const data = await response.json();
+        this.chatbotConfig = data;
+        if (!this.chatbotConfig) return;
+        if (this.chatbotConfig.picture) await this.fetchImage(this.chatbotConfig.picture);
+        this.messages = [
+            { role: 'assistant', content: this.chatbotConfig?.welcome_message || 'Hola, soy un chatbot' },
+        ];
+    }
+
+    async loadChatsHistory() {
+        if (!this.token || !this.chatbotId) return;
+        const response = await fetch(API_URL + 'api/chat_history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + this.token
+            },
+            body: JSON.stringify({ chatbot_id: this.chatbotId })
+        });
+        const data = await response.json();
+        this.messages = [...this.messages, ...data]
+    }
+
+    async fetchImage(url) {
+        try {
+            const response = await fetch(API_URL + url, {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const blob = await response.blob();
+            const imageUrl = URL.createObjectURL(blob);
+            this.picture = imageUrl;
+        } catch (error) {
+            console.error('Error fetching image:', error);
+            this.picture = null;
+        }
+    };
+
     static get observedAttributes() {
         return ['token', 'keyLocal', 'chatbotId'];
     }
@@ -28,10 +92,7 @@ class ChatBot extends HTMLElement {
         if (name === 'token') this.token = newValue;
         if (name === 'keyLocal') this.keyLocal = localStorage.getItem(newValue);
         if (name === 'chatbotId') this.chatbotId = newValue;
-    }
-
-    connectedCallback() {
-        this.render();
+        this.initChatbot();
     }
 
     async render() {
@@ -49,16 +110,19 @@ class ChatBot extends HTMLElement {
             }
             dialog.setAttribute('open', '');
             input.focus();
+            this.scrollToBottom();
         });
         close.addEventListener('click', () => {
             dialog.removeAttribute('open');
         });
 
         const sendNewMessage = () => {
+            if(this.isAnswering) return;
             this.messages = [...this.messages, { role: 'user', content: input.value }];
             input.value = '';
             this.renderMessages();
             this.sendMessage();
+            this.isAnswering = true;
         };
         input.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') sendNewMessage();
@@ -66,7 +130,6 @@ class ChatBot extends HTMLElement {
         sent.addEventListener('click', () => {
             sendNewMessage();
         });
-
 
         this.renderMessages();
     }
@@ -76,7 +139,9 @@ class ChatBot extends HTMLElement {
         messages.innerHTML = '';
         this.messages.forEach((msg) => {
             const message = `<div class="chatbot-message ${msg.role}">
-                <i class="pi ${msg.role === 'user' ? 'pi-user' : 'pi-comment'}"></i>
+                ${msg.role === 'assistant' ?
+                    (this.picture ? `<img src="${this.picture}" alt="Chatbot" style="width: 2.5rem; height: 2.5rem; border-radius: 50%; margin-right: .5rem;">` : '<i class="pi pi-comment"></i>')
+                    : '<i class="pi pi-user"></i>'}
                 <div>${msg.content}</div>
             </div>`;
             messages.innerHTML += message;
@@ -101,6 +166,8 @@ class ChatBot extends HTMLElement {
                 margin: 0;
                 padding: 0;
                 font-family: 'Poppins', sans-serif;
+                --emphasis-color: ${this.chatbotConfig?.emphasis_color || '#1a1a1a'};
+                --text-color: ${this.chatbotConfig?.text_color || '#1a1a1a'};
             }
 
             #chatbot-toggle{
@@ -109,8 +176,8 @@ class ChatBot extends HTMLElement {
                 bottom: 2rem;
                 width: 4rem;
                 height: 4rem;
-                background-color: #1a1a1a;
-                color: #fff;
+                background-color: var(--emphasis-color);
+                color: var(--text-color);
                 border: none;
                 border-radius: 50%;
                 cursor: pointer;
@@ -119,7 +186,7 @@ class ChatBot extends HTMLElement {
                     font-size: 1.6rem;
                 }
                 &:hover{
-                    background-color: #090909;
+                    background-color: color-mix(in srgb, var(--emphasis-color), black 15%);
                 }
             }
 
@@ -177,14 +244,14 @@ class ChatBot extends HTMLElement {
                     font-size: 1rem;
                 }
                 button{
-                    background-color: #1a1a1a;
-                    color: #fff;
+                    background-color: var(--emphasis-color);
+                    color: var(--text-color);
                     border: none;
                     border-radius: .5rem;
                     padding: .8rem 1rem;
                     cursor: pointer;
                     &:hover{
-                        background-color: #090909;
+                        background-color: color-mix(in srgb, var(--emphasis-color), black 15%);
                     }
                 }
             }
@@ -243,7 +310,7 @@ class ChatBot extends HTMLElement {
         </head>
         <dialog id="chatbot-dialog">
             <header class="chatbot-header">
-                <h4>Chatbot</h4>
+                <h4>${this.chatbotConfig?.name || 'Chatbot'}</h4>
                 <button id="chatbot-close">
                     <i class="pi pi-times"></i>
                 </button>
@@ -275,7 +342,7 @@ class ChatBot extends HTMLElement {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + this.token
             },
-            body: JSON.stringify({ chatbot_id: this.chatbotId, question: data })
+            body: JSON.stringify({ chatbot_id: this.chatbotId, content: data })
         });
 
         const reader = response.body.getReader();
@@ -307,13 +374,13 @@ class ChatBot extends HTMLElement {
                         this.messages = [...this.messages.slice(0, -1), { role: 'assistant', content: accumulatedContent }];
                     }
                     this.renderMessages();
-                    this.scrollToBottom();
                 }
             } catch (e) {
                 console.error('Error parsing chunk:', e);
                 continue;
             }
         }
+        this.isAnswering = false;
     }
 }
 

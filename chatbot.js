@@ -250,6 +250,9 @@ class WChatBot extends HTMLElement {
                     border-radius: .5rem;
                     padding: .8rem 1rem;
                     cursor: pointer;
+                    i{
+                        font-size: 1rem;
+                    }
                     &:hover{
                         background-color: color-mix(in srgb, var(--emphasis-color), black 15%);
                     }

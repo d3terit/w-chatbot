@@ -167,7 +167,7 @@ class ChatBot extends HTMLElement {
                 padding: 0;
                 font-family: 'Poppins', sans-serif;
                 --emphasis-color: ${this.chatbotConfig?.emphasis_color || '#1a1a1a'};
-                --text-color: ${this.chatbotConfig?.text_color || '#1a1a1a'};
+                --text-color: ${this.chatbotConfig?.text_color || '#fff'};
             }
 
             #chatbot-toggle{

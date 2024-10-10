@@ -1,7 +1,7 @@
-const API_URL_W_CHATBOT = 'http://localhost:8080/';
 class ChatBot extends HTMLElement {
     constructor() {
         super();
+        this.API_URL_W_CHATBOT = 'http://localhost:8080/';
         this.attachShadow({ mode: 'open' });
         this.chatbotId = this.getAttribute('chatbotId');
         this.token = this.getAttribute('token') || localStorage.getItem(this.getAttribute('keyLocal') || 'chatbot-token');
@@ -32,7 +32,7 @@ class ChatBot extends HTMLElement {
 
     async loadChatbotConfig() {
         if (!this.token || !this.chatbotId) return;
-        const response = await fetch(API_URL_W_CHATBOT + 'api/chatbot_config', {
+        const response = await fetch(this.API_URL_W_CHATBOT + 'api/chatbot_config', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ class ChatBot extends HTMLElement {
 
     async loadChatsHistory() {
         if (!this.token || !this.chatbotId) return;
-        const response = await fetch(API_URL_W_CHATBOT + 'api/chat_history', {
+        const response = await fetch(this.API_URL_W_CHATBOT + 'api/chat_history', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ class ChatBot extends HTMLElement {
 
     async fetchImage(url) {
         try {
-            const response = await fetch(API_URL_W_CHATBOT + url, {
+            const response = await fetch(this.API_URL_W_CHATBOT + url, {
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
                 }
@@ -336,7 +336,7 @@ class ChatBot extends HTMLElement {
     async sendMessage() {
         const data = this.messages.slice(-1)[0].content;
 
-        const response = await fetch(API_URL_W_CHATBOT + 'api/chat', {
+        const response = await fetch(this.API_URL_W_CHATBOT + 'api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

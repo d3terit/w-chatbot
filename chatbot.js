@@ -7,6 +7,7 @@ class WChatBot extends HTMLElement {
         this.token = this.getAttribute('token') || localStorage.getItem(this.getAttribute('keyLocal') || 'chatbot-token');
         this.chatbotConfig = null;
         this.isAnswering = false;
+        this.messages = [];
         const style = document.createElement('style');
         style.textContent = `
             @font-face {
@@ -26,6 +27,7 @@ class WChatBot extends HTMLElement {
 
     async initChatbot() {
         await this.loadChatbotConfig();
+        if (!this.chatbotConfig) return;
         await this.loadChatsHistory();
         this.render();
     }
@@ -44,9 +46,6 @@ class WChatBot extends HTMLElement {
         this.chatbotConfig = data;
         if (!this.chatbotConfig) return;
         if (this.chatbotConfig.picture) await this.fetchImage(this.chatbotConfig.picture);
-        this.messages = [
-            { role: 'assistant', content: this.chatbotConfig?.welcome_message || 'Hola, soy un chatbot' },
-        ];
     }
 
     async loadChatsHistory() {
@@ -60,7 +59,7 @@ class WChatBot extends HTMLElement {
             body: JSON.stringify({ chatbot_id: this.chatbotId })
         });
         const data = await response.json();
-        this.messages = [...this.messages, ...data]
+        this.messages = [ { role: 'assistant', content: this.chatbotConfig?.welcome_message || 'Hola, soy un chatbot' }, ...data]
     }
 
     async fetchImage(url) {
@@ -85,17 +84,21 @@ class WChatBot extends HTMLElement {
     };
 
     static get observedAttributes() {
-        return ['token', 'keyLocal', 'chatbotId'];
+        return ['token', 'key-local', 'chatbot-id'];
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
         if (name === 'token') this.token = newValue;
-        if (name === 'keyLocal') this.keyLocal = localStorage.getItem(newValue);
-        if (name === 'chatbotId') this.chatbotId = newValue;
+        if (name === 'key-local') {
+            this.keyLocal = newValue;
+            this.token = localStorage.getItem(newValue);
+        }
+        if (name === 'chatbot-id') this.chatbotId = newValue;
         this.initChatbot();
     }
 
     async render() {
+        this.shadowRoot.innerHTML = '';
         const template = await this.loadTemplate();
         this.shadowRoot.appendChild(template.content.cloneNode(true));
         const dialog = this.shadowRoot.getElementById('chatbot-dialog');
@@ -136,11 +139,13 @@ class WChatBot extends HTMLElement {
 
     renderMessages() {
         const messages = this.shadowRoot.getElementById('chatbot-messages');
+        if (!messages) return;
         messages.innerHTML = '';
         this.messages.forEach((msg) => {
             const message = `<div class="chatbot-message ${msg.role}">
                 ${msg.role === 'assistant' ?
-                    (this.picture ? `<img src="${this.picture}" alt="Chatbot" style="width: 2.5rem; height: 2.5rem; border-radius: 50%; margin-right: .5rem;">` : '<i class="pi pi-comment"></i>')
+                    (this.picture ? `<img src="${this.picture}" alt="Chatbot" style="width: 2.5rem; height: 2.5rem; border-radius: 50%; margin-right: .5rem; object-fit: contain;">` 
+                        : '<i class="pi pi-comment"></i>')
                     : '<i class="pi pi-user"></i>'}
                 <div>${msg.content}</div>
             </div>`;

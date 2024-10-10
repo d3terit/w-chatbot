@@ -1,4 +1,4 @@
-class ChatBot extends HTMLElement {
+class WChatBot extends HTMLElement {
     constructor() {
         super();
         this.API_URL_W_CHATBOT = 'http://localhost:8080/';
@@ -384,4 +384,4 @@ class ChatBot extends HTMLElement {
     }
 }
 
-window.customElements.define('w-chat-bot', ChatBot);
+window.customElements.define('w-chat-bot', WChatBot);

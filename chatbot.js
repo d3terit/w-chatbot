@@ -250,9 +250,6 @@ class WChatBot extends HTMLElement {
                     border-radius: .5rem;
                     padding: .8rem 1rem;
                     cursor: pointer;
-                    i{
-                        font-size: 1rem;
-                    }
                     &:hover{
                         background-color: color-mix(in srgb, var(--emphasis-color), black 15%);
                     }
@@ -323,7 +320,7 @@ class WChatBot extends HTMLElement {
             <footer class="chatbot-footer">
                 <input type="text" id="chatbot-input" placeholder="Escribe un mensaje..." />
                 <button id="chatbot-send">
-                    <i class="pi pi-send"></i>
+                    <i class="pi pi-send" style="font-size: 1rem;"></i>
                 </button>
             </footer>
         </dialog>
